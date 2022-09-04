@@ -118,6 +118,9 @@ type TerraformCLI interface {
 	// It's intended to inject a wrapper command such as direnv.
 	SetExecPath(execPath string)
 
+	// SetIgnoreOutputDiffs customizes if the plan output changes should report as failing changes or to be ignored.
+	SetIgnoreOutputDiffs(ignoreOutputDiffs bool)
+
 	// OverrideBackendToLocal switches the backend to local and returns a function
 	// to switch it back to remote with defer.
 	// The -state flag for terraform command is not valid for remote state,
@@ -138,6 +141,9 @@ type terraformCLI struct {
 	// execPath is a string which executes the terraform command.
 	// If empty, default to terraform.
 	execPath string
+
+	// ignoreOutputDiffs ignore plan output changes
+	ignoreOutputDiffs bool
 }
 
 var _ TerraformCLI = (*terraformCLI)(nil)
@@ -188,6 +194,11 @@ func (c *terraformCLI) Dir() string {
 // It's intended to inject a wrapper command such as direnv.
 func (c *terraformCLI) SetExecPath(execPath string) {
 	c.execPath = execPath
+}
+
+// SetIgnoreOutputDiffs customizes if the plan output changes should report as failing changes or to be ignored.
+func (c *terraformCLI) SetIgnoreOutputDiffs(ignoreOutputDiffs bool) {
+	c.ignoreOutputDiffs = ignoreOutputDiffs
 }
 
 // OverrideBackendToLocal switches the backend to local and returns a function

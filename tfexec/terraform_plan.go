@@ -4,6 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
+)
+
+const (
+	OutputChanges      = "Changes to Outputs:"
+	ChangesStartString = "Terraform will perform the following actions:"
+	ChangesEndString   = "Plan: "
 )
 
 // Plan computes expected changes.
@@ -44,11 +51,28 @@ func (c *terraformCLI) Plan(ctx context.Context, state *State, opts ...string) (
 
 	args = append(args, opts...)
 
-	_, _, err := c.Run(ctx, args...)
+	out, _, err := c.Run(ctx, args...)
 
 	// terraform plan -detailed-exitcode returns 2 if there is a diff.
 	// So we intentionally ignore an error of read the plan file and returns the
 	// original error of terraform plan command.
 	plan, _ := os.ReadFile(planOut)
+
+	// If ignore plan output changes is set to true and terraform plan option -detailed-exitcode, skip error code 2 and return plan with nil error
+	if err != nil && (c.ignoreOutputDiffs &&
+		strings.Contains(out, OutputChanges) &&
+		!strings.Contains(out, ChangesStartString) &&
+		!strings.Contains(out, ChangesEndString)) {
+		return NewPlan(plan), nil
+	}
+
+	// If ignore plan output changes is set to true and only there are changes in outputs return plan and no error
+	if c.ignoreOutputDiffs &&
+		strings.Contains(out, OutputChanges) &&
+		!strings.Contains(out, ChangesStartString) &&
+		!strings.Contains(out, ChangesEndString) {
+		return NewPlan(plan), nil
+	}
+
 	return NewPlan(plan), err
 }

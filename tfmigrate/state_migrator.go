@@ -86,8 +86,11 @@ func NewStateMigrator(dir string, workspace string, actions []StateAction,
 	o *MigratorOption, force bool) *StateMigrator {
 	e := tfexec.NewExecutor(dir, os.Environ())
 	tf := tfexec.NewTerraformCLI(e)
-	if o != nil && len(o.ExecPath) > 0 {
-		tf.SetExecPath(o.ExecPath)
+	if o != nil {
+		if len(o.ExecPath) > 0 {
+			tf.SetExecPath(o.ExecPath)
+		}
+		tf.SetIgnoreOutputDiffs(o.IgnoreOutputDiffs)
 	}
 
 	return &StateMigrator{

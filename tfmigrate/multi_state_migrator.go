@@ -85,9 +85,13 @@ func NewMultiStateMigrator(fromDir string, toDir string, fromWorkspace string, t
 	actions []MultiStateAction, o *MigratorOption, force bool) *MultiStateMigrator {
 	fromTf := tfexec.NewTerraformCLI(tfexec.NewExecutor(fromDir, os.Environ()))
 	toTf := tfexec.NewTerraformCLI(tfexec.NewExecutor(toDir, os.Environ()))
-	if o != nil && len(o.ExecPath) > 0 {
-		fromTf.SetExecPath(o.ExecPath)
-		toTf.SetExecPath(o.ExecPath)
+	if o != nil {
+		if len(o.ExecPath) > 0 {
+			fromTf.SetExecPath(o.ExecPath)
+			toTf.SetExecPath(o.ExecPath)
+		}
+		fromTf.SetIgnoreOutputDiffs(o.IgnoreOutputDiffs)
+		toTf.SetIgnoreOutputDiffs(o.IgnoreOutputDiffs)
 	}
 
 	return &MultiStateMigrator{

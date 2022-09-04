@@ -174,3 +174,118 @@ func TestAccTerraformCLIPlanWithOut(t *testing.T) {
 		t.Errorf("failed to find a plan file: %s, err %s", planOut, err)
 	}
 }
+
+func TestAccTerraformCLIPlanIgnoreOutputChanges(t *testing.T) {
+	SkipUnlessAcceptanceTestEnabled(t)
+
+	cases := []struct {
+		desc    string
+		source  string
+		opts    []string
+		ignore  bool
+		wantErr bool
+		detail  bool
+	}{
+		{
+			desc:    "Ignore Plan Output Changes False",
+			source:  `output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan", "-detailed-exitcode"},
+			ignore:  false,
+			wantErr: false,
+			detail:  true,
+		},
+		{
+			desc:    "Ignore Plan Output Changes True",
+			source:  `output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color"},
+			ignore:  true,
+			wantErr: false,
+			detail:  false,
+		},
+		{
+			desc:    "Ignore Plan Output Changes True With Detail Exit Code",
+			source:  `output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan", "-detailed-exitcode"},
+			ignore:  true,
+			wantErr: false,
+			detail:  true,
+		},
+		{
+			desc: "Ignore Plan Output Changes True With Detail Exit Code, with new resource",
+			source: `resource "null_resource" "foo" {}
+output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan", "-detailed-exitcode"},
+			ignore:  true,
+			wantErr: true,
+			detail:  true,
+		},
+		{
+			desc: "Ignore Plan Output Changes False With Detail Exit Code, with new resource",
+			source: `resource "null_resource" "foo" {}
+output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan", "-detailed-exitcode"},
+			ignore:  false,
+			wantErr: true,
+			detail:  true,
+		},
+		{
+			desc: "Ignore Plan Output Changes True With Detail Exit Code, with new resource",
+			source: `resource "null_resource" "foo" {}
+output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan", "-detailed-exitcode"},
+			ignore:  true,
+			wantErr: true,
+			detail:  true,
+		},
+		{
+			desc: "Ignore Plan Output Changes True, with new resource",
+			source: `resource "null_resource" "foo" {}
+output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan"},
+			ignore:  true,
+			wantErr: false,
+			detail:  false,
+		},
+		{
+			desc: "Ignore Plan Output Changes False, with new resource",
+			source: `resource "null_resource" "foo" {}
+output "test" { value = "Changed output"}`,
+			opts:    []string{"-input=false", "-no-color", "-out=foo.tfplan"},
+			ignore:  false,
+			wantErr: false,
+			detail:  false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			e := SetupTestAcc(t, tc.source)
+			terraformCLI := NewTerraformCLI(e)
+
+			terraformCLI.SetIgnoreOutputDiffs(tc.ignore)
+
+			err := terraformCLI.Init(context.Background(), "-input=false", "-no-color")
+			if err != nil {
+				t.Fatalf("failed to run terraform init: %s", err)
+			}
+
+			plan, err := terraformCLI.Plan(context.Background(), nil, tc.opts...)
+
+			if !tc.ignore && !tc.wantErr && tc.detail && err == nil {
+				t.Fatalf("Plan output changed! terraform plan error: %s", err)
+			}
+
+			if tc.ignore && !tc.wantErr && err != nil {
+				t.Fatalf("Plan output changed! terraform plan error: %s", err)
+			}
+
+			if tc.wantErr && err == nil {
+				t.Fatalf("Plan has changed! terraform plan error: %s", err)
+			}
+
+			if plan == nil {
+				t.Error("plan success but returns nil")
+			}
+		})
+	}
+}

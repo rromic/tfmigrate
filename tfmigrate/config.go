@@ -33,4 +33,7 @@ type MigratorOption struct {
 
 	// BackendConfig is a -backend-config option for remote state
 	BackendConfig []string
+
+	// IgnoreOutputDiffs ignore changes in plan outputs
+	IgnoreOutputDiffs bool
 }
